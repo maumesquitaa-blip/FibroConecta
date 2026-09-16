@@ -254,13 +254,6 @@ export const TabelaPacientes: React.FC<TabelaPacientesProps> = ({ currentRole })
             <span>Entregue</span>
           </span>
         );
-      case 'RECUSADO':
-        return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
-            <AlertCircle className="w-3 h-3" />
-            <span>Recusado</span>
-          </span>
-        );
       default:
         return null;
     }
@@ -489,7 +482,6 @@ export const TabelaPacientes: React.FC<TabelaPacientesProps> = ({ currentRole })
                               <option value="APROVADO">Mudar: Aprovado</option>
                               <option value="EMITIDO">Mudar: Emitido</option>
                               <option value="ENTREGUE">Mudar: Entregue</option>
-                              <option value="RECUSADO">Mudar: Recusado</option>
                             </select>
                           )}
                         </div>
