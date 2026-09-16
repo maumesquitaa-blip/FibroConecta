@@ -41,7 +41,7 @@ export async function gerarCarteiraBlob(paciente: Paciente): Promise<Blob> {
     qrCodeDataUrl,
   });
 
-  return await pdf(doc).toBlob();
+  return await pdf(doc as any).toBlob();
 }
 
 /**
