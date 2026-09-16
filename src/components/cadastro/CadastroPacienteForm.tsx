@@ -55,6 +55,7 @@ export const CadastroPacienteForm: React.FC = () => {
     register,
     handleSubmit,
     setValue,
+    watch,
     reset,
     formState: { errors },
   } = useForm<FormData>({
@@ -269,11 +270,25 @@ export const CadastroPacienteForm: React.FC = () => {
               )}
             </div>
 
-            {/* CPF com validação matemática e máscara */}
+            {/* CPF com validação matemática e máscara dinâmica */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-gray-700 block mb-1">
-                CPF <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold uppercase tracking-wider text-gray-700 block">
+                  CPF <span className="text-red-500">*</span>
+                </label>
+                {watch('cpf')?.length === 14 && (
+                  validarCPF(watch('cpf')) ? (
+                    <span className="text-[10px] text-emerald-600 font-bold flex items-center space-x-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>Válido (Dígitos verificados)</span>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-rose-600 font-bold flex items-center space-x-1">
+                      <span>Dígitos Inválidos</span>
+                    </span>
+                  )
+                )}
+              </div>
               <input
                 type="text"
                 placeholder="000.000.000-00"
@@ -340,17 +355,32 @@ export const CadastroPacienteForm: React.FC = () => {
               <span className="text-[11px] text-gray-500">Padrão nacional: M79.7 (Fibromialgia)</span>
             </div>
 
-            {/* Contato de Emergência */}
+            {/* Contato de Emergência com máscara dinâmica em tempo real */}
             <div className="md:col-span-2">
               <label className="text-xs font-bold uppercase tracking-wider text-gray-700 block mb-1">
-                Contato de Emergência (Telefone e Nome/Grau) <span className="text-red-500">*</span>
+                Contato de Emergência ((98) 90000-0000 / Nome) <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 placeholder="(98) 98765-4321 - Maria (Mãe)"
                 {...register('contato_emergencia')}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  // Se contém apenas números ou máscara inicial de telefone, formata dinamicamente
+                  if (!val.includes(' - ') && val.length <= 15) {
+                    const digitos = val.replace(/\D/g, '');
+                    if (digitos.length > 0) {
+                      setValue('contato_emergencia', mascaraTelefone(digitos), { shouldValidate: true });
+                      return;
+                    }
+                  }
+                  setValue('contato_emergencia', val, { shouldValidate: true });
+                }}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none text-sm transition"
               />
+              <span className="text-[11px] text-gray-500">
+                Formatação automática do telefone com DDD: (98) 90000-0000
+              </span>
               {errors.contato_emergencia && (
                 <p className="text-xs text-red-500 mt-1 font-medium">{errors.contato_emergencia.message}</p>
               )}

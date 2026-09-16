@@ -223,6 +223,52 @@ export const TabelaPacientes: React.FC<TabelaPacientesProps> = ({ currentRole })
     }
   };
 
+  // 8. Baixa Simultânea de Status (PENDENTE -> EMITIDO) com Geração Instantânea de ZIP
+  const handleBaixaSimultaneaEZip = async () => {
+    const listaAlvo = pacientes.filter((p) => selecionados.includes(p.id));
+    if (listaAlvo.length === 0) {
+      toast.warning('Selecione os pacientes na tabela.');
+      return;
+    }
+
+    try {
+      setBaixandoLote(true);
+      toast.info(`Atualizando status de ${listaAlvo.length} pacientes para EMITIDO...`);
+
+      const dataHoje = new Date().toISOString().split('T')[0];
+      const payload: Partial<Paciente> = {
+        status_carteira: 'EMITIDO',
+        data_emissao: dataHoje,
+      };
+
+      const { error } = await supabase
+        .from('pacientes')
+        .update(payload)
+        .in('id', selecionados);
+
+      if (error) throw error;
+
+      setPacientes((prev) =>
+        prev.map((p) => (selecionados.includes(p.id) ? { ...p, ...payload } : p))
+      );
+      toast.success('Status atualizado para EMITIDO!');
+
+      toast.info('Compilando lote ZIP com PDFs renomeados por CPF...');
+      await baixarCarteirasEmLoteZIP(listaAlvo, (atual, total) => {
+        setProgressoLote({ atual, total });
+      });
+
+      toast.success('Lote ZIP gerado e baixado com sucesso!');
+      setSelecionados([]);
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro na baixa simultânea e geração do lote.');
+    } finally {
+      setBaixandoLote(false);
+      setProgressoLote(null);
+    }
+  };
+
   // Cores e Ícones de Status
   const getBadgeStatus = (status: StatusCarteira) => {
     switch (status) {
@@ -335,18 +381,29 @@ export const TabelaPacientes: React.FC<TabelaPacientesProps> = ({ currentRole })
 
               <div className="h-4 w-px bg-purple-300 mx-1" />
 
+              {/* Baixa Simultânea (PENDENTE -> EMITIDO) & ZIP */}
+              <button
+                onClick={handleBaixaSimultaneaEZip}
+                disabled={baixandoLote}
+                className="inline-flex items-center space-x-1.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white px-3.5 py-1.5 text-xs font-bold rounded-lg shadow transition disabled:opacity-50"
+                title="Atualiza status de PENDENTE para EMITIDO e baixa arquivo ZIP com PDFs nomeados pelo CPF"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-purple-200" />
+                <span>
+                  {baixandoLote
+                    ? `Processando (${progressoLote?.atual || 0}/${progressoLote?.total || 0})...`
+                    : 'Baixar Status (PENDENTE → EMITIDO) & .ZIP'}
+                </span>
+              </button>
+
               {/* Download em Lote ZIP */}
               <button
                 onClick={handleDownloadLoteZIP}
                 disabled={baixandoLote}
-                className="inline-flex items-center space-x-1.5 bg-fibro-950 hover:bg-fibro-900 text-white px-4 py-1.5 text-xs font-bold rounded-lg shadow transition disabled:opacity-50"
+                className="inline-flex items-center space-x-1.5 bg-fibro-950 hover:bg-fibro-900 text-white px-3.5 py-1.5 text-xs font-bold rounded-lg shadow transition disabled:opacity-50"
               >
-                <FileArchive className="w-4 h-4 text-purple-300" />
-                <span>
-                  {baixandoLote
-                    ? `Gerando ZIP (${progressoLote?.atual || 0}/${progressoLote?.total || 0})...`
-                    : 'Baixar Selecionadas em ZIP'}
-                </span>
+                <FileArchive className="w-3.5 h-3.5 text-purple-300" />
+                <span>Apenas Baixar .ZIP</span>
               </button>
             </div>
           </div>

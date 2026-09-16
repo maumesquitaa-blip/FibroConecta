@@ -67,7 +67,8 @@ export async function baixarCarteirasEmLoteZIP(
   for (const paciente of pacientes) {
     try {
       const blob = await gerarCarteiraBlob(paciente);
-      const nomeArquivo = `CIPFIBRO_${paciente.nome_completo.replace(/\s+/g, '_')}_${paciente.cpf.replace(/\D/g, '')}.pdf`;
+      const cpfLimpo = paciente.cpf.replace(/\D/g, '');
+      const nomeArquivo = `${cpfLimpo}_CIPFIBRO_${paciente.nome_completo.replace(/\s+/g, '_')}.pdf`;
       folder?.file(nomeArquivo, blob);
     } catch (error) {
       console.error(`Erro ao gerar PDF para ${paciente.nome_completo}:`, error);
