@@ -1,4 +1,4 @@
-export type StatusCarteira = 'PENDENTE' | 'APROVADO' | 'EMITIDO' | 'ENTREGUE' | 'RECUSADO';
+export type StatusCarteira = 'PENDENTE' | 'APROVADO' | 'EMITIDO' | 'ENTREGUE';
 
 export type UserRole = 'admin' | 'atendente';
 
@@ -16,6 +16,7 @@ export interface Paciente {
   comprovante_endereco_url: string;
   status_carteira: StatusCarteira;
   data_emissao: string | null;
+  created_by?: string | null;
   created_at: string;
   updated_at?: string;
 }
@@ -24,7 +25,7 @@ export type PacienteInput = Omit<Paciente, 'id' | 'created_at' | 'updated_at'>;
 
 export interface Perfil {
   id: string;
-  nome: string | null;
+  nome: string;
   role: UserRole;
   created_at: string;
 }

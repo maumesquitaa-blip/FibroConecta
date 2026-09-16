@@ -121,7 +121,9 @@ export const CadastroPacienteForm: React.FC = () => {
       setSalvando(true);
       toast.info('Salvando dados no Supabase...');
 
-      const novoPaciente = {
+      const { data: authUser } = await supabase.auth.getUser();
+
+      const novoPaciente: any = {
         nome_completo: data.nome_completo.toUpperCase(),
         cpf: data.cpf,
         cartao_sus: data.cartao_sus,
@@ -134,6 +136,7 @@ export const CadastroPacienteForm: React.FC = () => {
         comprovante_endereco_url: comprovanteUrl,
         status_carteira: 'PENDENTE' as const,
         data_emissao: new Date().toISOString().split('T')[0],
+        ...(authUser?.user?.id ? { created_by: authUser.user.id } : {}),
       };
 
       const { data: inserted, error } = await supabase
