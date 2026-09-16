@@ -35,10 +35,11 @@ export default function HomePage() {
           .select('status_carteira');
 
         if (data) {
-          const total = data.length;
-          const pendentes = data.filter((p) => p.status_carteira === 'PENDENTE').length;
-          const aprovados = data.filter((p) => p.status_carteira === 'APROVADO').length;
-          const emitidos = data.filter((p) => p.status_carteira === 'EMITIDO' || p.status_carteira === 'ENTREGUE').length;
+          const rows = data as Array<{ status_carteira: string }>;
+          const total = rows.length;
+          const pendentes = rows.filter((p) => p.status_carteira === 'PENDENTE').length;
+          const aprovados = rows.filter((p) => p.status_carteira === 'APROVADO').length;
+          const emitidos = rows.filter((p) => p.status_carteira === 'EMITIDO' || p.status_carteira === 'ENTREGUE').length;
           setMetricas({ total, pendentes, aprovados, emitidos });
         }
       } catch (err) {
