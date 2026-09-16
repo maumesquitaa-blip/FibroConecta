@@ -69,10 +69,22 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         .getPublicUrl(caminho);
 
       onUrlUploaded(publicUrlData.publicUrl);
-      toast.success(`${label} enviado com sucesso!`);
     } catch (err: any) {
       console.error('Erro no upload:', err);
-      toast.error(`Falha no upload: ${err.message || 'Verifique sua conexão ou permissões no Supabase.'}`);
+      if (err.message?.includes('Bucket not found') || err.message?.includes('not found')) {
+        toast.error(`O bucket "${bucket}" ainda não foi criado no Supabase.`);
+        // Fallback para permitir teste sem travar o usuário
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            onUrlUploaded(e.target.result as string);
+            toast.info(`Anexo "${file.name}" carregado localmente para permitir o teste.`);
+          }
+        };
+        reader.readAsDataURL(file);
+      } else {
+        toast.error(`Falha no upload: ${err.message || 'Verifique sua conexão ou permissões no Supabase.'}`);
+      }
     } finally {
       setCarregando(false);
     }
