@@ -156,10 +156,37 @@ export const CadastroPacienteForm: React.FC = () => {
         .single();
 
       if (error) {
+        if (
+          error.message?.includes('Could not find the table') ||
+          error.message?.includes('schema cache') ||
+          error.code === 'PGRST205' ||
+          error.code === '42P01'
+        ) {
+          console.warn('Tabela pacientes não encontrada no Supabase, ativando fallback local.');
+          const pacienteLocal: Paciente = {
+            ...novoPaciente,
+            id: `temp_${Date.now()}`,
+            created_at: new Date().toISOString(),
+          };
+
+          try {
+            const salvos = JSON.parse(localStorage.getItem('fibro_pacientes_local') || '[]');
+            localStorage.setItem('fibro_pacientes_local', JSON.stringify([pacienteLocal, ...salvos]));
+          } catch (e) {}
+
+          toast.warning('Tabela ainda não criada no Supabase! Gerando carteira em modo de demonstração local.');
+          setPacienteCadastrado(pacienteLocal);
+          setIsPreviewOpen(true);
+          reset();
+          setFotoUrl('');
+          setLaudoUrl('');
+          setComprovanteUrl('');
+          return;
+        }
         throw error;
       }
 
-      toast.success('Paciente cadastrado com sucesso!');
+      toast.success('Paciente cadastrado com sucesso no Supabase!');
       setPacienteCadastrado(inserted as Paciente);
       setIsPreviewOpen(true);
       reset();

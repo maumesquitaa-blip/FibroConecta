@@ -76,9 +76,25 @@ export const TabelaPacientes: React.FC<TabelaPacientesProps> = ({ currentRole })
 
       if (error) {
         console.warn('Erro ao carregar do Supabase:', error);
-        toast.error('Erro ao consultar banco de dados. Verifique a tabela "pacientes".');
+        try {
+          const salvos = JSON.parse(localStorage.getItem('fibro_pacientes_local') || '[]');
+          if (salvos.length > 0) {
+            setPacientes(salvos);
+            return;
+          }
+        } catch (e) {}
+        toast.warning('Tabela "pacientes" não encontrada no Supabase. Acesse /setup para configurá-la.');
       } else {
-        setPacientes((data as Paciente[]) || []);
+        let lista = (data as Paciente[]) || [];
+        try {
+          const salvos = JSON.parse(localStorage.getItem('fibro_pacientes_local') || '[]');
+          if (salvos.length > 0) {
+            const ids = new Set(lista.map(p => p.id));
+            const novosLocais = salvos.filter((p: Paciente) => !ids.has(p.id));
+            lista = [...novosLocais, ...lista];
+          }
+        } catch (e) {}
+        setPacientes(lista);
       }
     } catch (err: any) {
       console.error(err);
