@@ -82,3 +82,102 @@ export function formatarDataBR(dataIso?: string | null): string {
   }
   return dataIso;
 }
+
+/**
+ * Executa uma Promise com tempo limite (timeout) para evitar travamentos de rede ou conexões congeladas.
+ */
+export function promiseWithTimeout<T = any>(
+  promise: Promise<T> | PromiseLike<T>,
+  timeoutMs: number,
+  timeoutMessage = 'A operação excedeu o tempo limite estipulado.'
+): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs)
+    ),
+  ]);
+}
+
+
+/**
+ * Compacta e redimensiona qualquer foto para o enquadramento 3x4 padrão (360x480px, JPEG 82%).
+ * Reduz arquivos de 3-5MB para ~30-50KB instantaneamente com corte centralizado (cover).
+ */
+export async function comprimirImagem3x4(
+  fileOrBase64: File | string,
+  targetWidth = 360,
+  targetHeight = 480,
+  quality = 0.82
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    // Se estiver rodando fora do navegador
+    if (typeof window === 'undefined') {
+      if (typeof fileOrBase64 === 'string') return resolve(fileOrBase64);
+      return reject(new Error('Execução fora do navegador.'));
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          throw new Error('Não foi possível inicializar o contexto 2D do Canvas.');
+        }
+
+        // Fundo branco
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+        // Lógica de centralização 'object-fit: cover'
+        const imgRatio = img.naturalWidth / img.naturalHeight;
+        const targetRatio = targetWidth / targetHeight;
+
+        let renderWidth = targetWidth;
+        let renderHeight = targetHeight;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (imgRatio > targetRatio) {
+          // Imagem mais larga que o alvo
+          renderHeight = targetHeight;
+          renderWidth = targetHeight * imgRatio;
+          offsetX = (targetWidth - renderWidth) / 2;
+        } else {
+          // Imagem mais alta que o alvo
+          renderWidth = targetWidth;
+          renderHeight = targetWidth / imgRatio;
+          offsetY = (targetHeight - renderHeight) / 2;
+        }
+
+        ctx.drawImage(img, offsetX, offsetY, renderWidth, renderHeight);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    img.onerror = () => {
+      reject(new Error('Erro ao carregar a imagem para processamento.'));
+    };
+
+    if (typeof fileOrBase64 === 'string') {
+      img.src = fileOrBase64;
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Erro ao ler o arquivo de foto.'));
+      reader.readAsDataURL(fileOrBase64);
+    }
+  });
+}
+

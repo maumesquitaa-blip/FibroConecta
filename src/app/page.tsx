@@ -30,24 +30,46 @@ export default function HomePage() {
   useEffect(() => {
     async function carregarMetricas() {
       try {
-        const { data, error } = await supabase
-          .from('pacientes')
-          .select('status_carteira');
+        let rows: Array<{ status_carteira: string }> = [];
 
-        if (data) {
-          const rows = data as Array<{ status_carteira: string }>;
-          const total = rows.length;
-          const pendentes = rows.filter((p) => p.status_carteira === 'PENDENTE').length;
-          const aprovados = rows.filter((p) => p.status_carteira === 'APROVADO').length;
-          const emitidos = rows.filter((p) => p.status_carteira === 'EMITIDO' || p.status_carteira === 'ENTREGUE').length;
-          setMetricas({ total, pendentes, aprovados, emitidos });
+        // 1. Tenta buscar no Supabase com timeout de 3s
+        try {
+          const query = supabase.from('pacientes').select('status_carteira');
+          const { data, error } = await Promise.race([
+            query,
+            new Promise<any>((_, reject) =>
+              setTimeout(() => reject(new Error('timeout')), 3000)
+            ),
+          ]);
+          if (!error && data) {
+            rows = data as Array<{ status_carteira: string }>;
+          }
+        } catch (e) {
+          console.warn('Busca de métricas remota com timeout/erro, usando dados locais:', e);
         }
+
+        // 2. Mescla com dados locais
+        if (typeof window !== 'undefined') {
+          try {
+            const locais = JSON.parse(localStorage.getItem('fibro_pacientes_local') || '[]');
+            if (locais.length > 0) {
+              rows = [...locais, ...rows];
+            }
+          } catch (e) {}
+        }
+
+        const total = rows.length;
+        const pendentes = rows.filter((p) => p.status_carteira === 'PENDENTE').length;
+        const aprovados = rows.filter((p) => p.status_carteira === 'APROVADO').length;
+        const emitidos = rows.filter((p) => p.status_carteira === 'EMITIDO' || p.status_carteira === 'ENTREGUE').length;
+        setMetricas({ total, pendentes, aprovados, emitidos });
       } catch (err) {
         console.warn('Erro ao carregar métricas:', err);
       }
     }
     carregarMetricas();
   }, []);
+
 
   return (
     <div className="space-y-10 pb-12">

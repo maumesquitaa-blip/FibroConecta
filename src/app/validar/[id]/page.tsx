@@ -22,16 +22,48 @@ export default function ValidarCarteiraPage() {
 
       try {
         setCarregando(true);
-        const { data, error } = await supabase
-          .from('pacientes')
-          .select('*')
-          .eq('id', pacienteId)
-          .single();
 
-        if (error || !data) {
+        // 1. Tenta buscar no Supabase com timeout de 3.5s
+        let pacienteEncontrado: Paciente | null = null;
+        try {
+          const query = supabase
+            .from('pacientes')
+            .select('*')
+            .eq('id', pacienteId)
+            .single();
+
+          const { data, error } = await Promise.race([
+            query,
+            new Promise<any>((_, reject) =>
+              setTimeout(() => reject(new Error('timeout')), 3500)
+            ),
+          ]);
+
+          if (!error && data) {
+            pacienteEncontrado = data as Paciente;
+          }
+        } catch (e) {
+          console.warn('Consulta remota falhou ou excedeu timeout, verificando registros locais:', e);
+        }
+
+        // 2. Se não encontrou no Supabase, consulta localStorage local
+        if (!pacienteEncontrado && typeof window !== 'undefined') {
+          try {
+            const locais: Paciente[] = JSON.parse(
+              localStorage.getItem('fibro_pacientes_local') || '[]'
+            );
+            const achado = locais.find((p) => p.id === pacienteId);
+            if (achado) {
+              pacienteEncontrado = achado;
+            }
+          } catch (e) {}
+        }
+
+        if (!pacienteEncontrado) {
           setErro('Carteira ou registro não localizado no sistema oficial.');
         } else {
-          setPaciente(data as Paciente);
+          setPaciente(pacienteEncontrado);
+          setErro(null);
         }
       } catch (err) {
         console.error(err);
@@ -43,6 +75,7 @@ export default function ValidarCarteiraPage() {
 
     buscarPaciente();
   }, [pacienteId]);
+
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">

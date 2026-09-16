@@ -25,6 +25,31 @@ export async function gerarQRCodeDataUrl(pacienteId: string, origin?: string): P
 }
 
 /**
+ * Valida com timeout se a URL de foto é acessível, evitando que o @react-pdf/renderer quebre
+ */
+async function obterFotoSegura(fotoUrl?: string): Promise<string | undefined> {
+  if (!fotoUrl) return undefined;
+  if (fotoUrl.startsWith('data:image/')) return fotoUrl;
+
+  if (fotoUrl.startsWith('http://') || fotoUrl.startsWith('https://')) {
+    try {
+      if (typeof window !== 'undefined' && window.AbortController) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch(fotoUrl, { method: 'HEAD', signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res.ok) return fotoUrl;
+      }
+    } catch (e) {
+      console.warn('Foto remota inacessível ou com bloqueio de CORS, renderizando com placeholder seguro.');
+      return undefined;
+    }
+  }
+
+  return fotoUrl;
+}
+
+/**
  * Gera o Blob do PDF da carteira (on-demand)
  */
 export async function gerarCarteiraBlob(paciente: Paciente): Promise<Blob> {
@@ -32,9 +57,15 @@ export async function gerarCarteiraBlob(paciente: Paciente): Promise<Blob> {
   const { CarteiraFibroPDF } = await import('@/components/carteira/CarteiraFibroPDF');
   
   const qrCodeDataUrl = await gerarQRCodeDataUrl(paciente.id);
+  const fotoSegura = await obterFotoSegura(paciente.foto_url);
+
+  const pacienteSeguro: Paciente = {
+    ...paciente,
+    foto_url: fotoSegura || '',
+  };
   
   const doc = React.createElement(CarteiraFibroPDF, {
-    paciente,
+    paciente: pacienteSeguro,
     qrCodeDataUrl,
   });
 
@@ -66,12 +97,14 @@ export async function baixarCarteirasEmLoteZIP(
   const folder = zip.folder('carteiras_cipfibro');
 
   let processados = 0;
+  let sucessos = 0;
   for (const paciente of pacientes) {
     try {
       const blob = await gerarCarteiraBlob(paciente);
       const cpfLimpo = paciente.cpf.replace(/\D/g, '');
       const nomeArquivo = `${cpfLimpo}_CIPFIBRO_${paciente.nome_completo.replace(/\s+/g, '_')}.pdf`;
       folder?.file(nomeArquivo, blob);
+      sucessos++;
     } catch (error) {
       console.error(`Erro ao gerar PDF para ${paciente.nome_completo}:`, error);
     }
@@ -85,3 +118,4 @@ export async function baixarCarteirasEmLoteZIP(
   const dataHoje = new Date().toISOString().split('T')[0];
   saveAs(zipBlob, `LOTE_CARTEIRAS_FIBROCONECTA_${dataHoje}.zip`);
 }
+

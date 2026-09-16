@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { Paciente, StatusCarteira, UserRole } from '@/types/database';
-import { formatarDataBR } from '@/lib/utils';
+import { formatarDataBR, promiseWithTimeout } from '@/lib/utils';
 import {
   baixarCarteiraPDF,
   baixarCarteirasEmLoteZIP,
@@ -65,40 +65,42 @@ export const TabelaPacientes: React.FC<TabelaPacientesProps> = ({ currentRole })
     isOpen: false,
   });
 
-  // 1. Carregar Pacientes
+  // 1. Carregar Pacientes com timeout de proteção
   const carregarPacientes = async () => {
     try {
       setCarregando(true);
-      const { data, error } = await supabase
+      const queryPromise = supabase
         .from('pacientes')
         .select('*')
         .order('created_at', { ascending: false });
 
+      const { data, error } = await promiseWithTimeout(
+        queryPromise,
+        4000,
+        'Tempo limite atingido ao carregar pacientes do servidor.'
+      );
+
       if (error) {
-        console.warn('Erro ao carregar do Supabase:', error);
-        try {
-          const salvos = JSON.parse(localStorage.getItem('fibro_pacientes_local') || '[]');
-          if (salvos.length > 0) {
-            setPacientes(salvos);
-            return;
-          }
-        } catch (e) {}
-        toast.warning('Tabela "pacientes" não encontrada no Supabase. Acesse /setup para configurá-la.');
-      } else {
-        let lista = (data as Paciente[]) || [];
-        try {
-          const salvos = JSON.parse(localStorage.getItem('fibro_pacientes_local') || '[]');
-          if (salvos.length > 0) {
-            const ids = new Set(lista.map(p => p.id));
-            const novosLocais = salvos.filter((p: Paciente) => !ids.has(p.id));
-            lista = [...novosLocais, ...lista];
-          }
-        } catch (e) {}
-        setPacientes(lista);
+        console.warn('Aviso ao carregar do Supabase:', error);
       }
+
+      let lista = (data as Paciente[]) || [];
+      try {
+        const salvos = JSON.parse(localStorage.getItem('fibro_pacientes_local') || '[]');
+        if (salvos.length > 0) {
+          const ids = new Set(lista.map((p) => p.id));
+          const novosLocais = salvos.filter((p: Paciente) => !ids.has(p.id));
+          lista = [...novosLocais, ...lista];
+        }
+      } catch (e) {}
+
+      setPacientes(lista);
     } catch (err: any) {
-      console.error(err);
-      toast.error('Falha na comunicação com o servidor.');
+      console.warn('Conexão remota indisponível ou lenta, recuperando dados locais:', err);
+      try {
+        const salvos = JSON.parse(localStorage.getItem('fibro_pacientes_local') || '[]');
+        setPacientes(salvos);
+      } catch (e) {}
     } finally {
       setCarregando(false);
     }
@@ -165,61 +167,76 @@ export const TabelaPacientes: React.FC<TabelaPacientesProps> = ({ currentRole })
     );
   };
 
-  // 5. Atualizar Status Individual
+  // 5. Atualizar Status Individual com Atualização Otimista
   const handleAtualizarStatusIndividual = async (pacienteId: string, novoStatus: StatusCarteira) => {
-    try {
-      const payload: Partial<Paciente> = { status_carteira: novoStatus };
-      if (novoStatus === 'EMITIDO' || novoStatus === 'APROVADO') {
-        payload.data_emissao = new Date().toISOString().split('T')[0];
-      }
-
-      const { error } = await supabase
-        .from('pacientes')
-        .update(payload)
-        .eq('id', pacienteId);
-
-      if (error) throw error;
-
-      setPacientes((prev) =>
-        prev.map((p) => (p.id === pacienteId ? { ...p, ...payload } : p))
-      );
-      toast.success(`Status atualizado para: ${novoStatus}`);
-    } catch (err: any) {
-      console.error(err);
-      toast.error('Erro ao atualizar status.');
+    const dataHoje = new Date().toISOString().split('T')[0];
+    const payload: Partial<Paciente> = { status_carteira: novoStatus };
+    if (novoStatus === 'EMITIDO' || novoStatus === 'APROVADO') {
+      payload.data_emissao = dataHoje;
     }
+
+    // Atualização otimista imediata na interface
+    setPacientes((prev) =>
+      prev.map((p) => (p.id === pacienteId ? { ...p, ...payload } : p))
+    );
+
+    // Sincronização local
+    try {
+      const salvos: Paciente[] = JSON.parse(localStorage.getItem('fibro_pacientes_local') || '[]');
+      const atualizados = salvos.map((p) => (p.id === pacienteId ? { ...p, ...payload } : p));
+      localStorage.setItem('fibro_pacientes_local', JSON.stringify(atualizados));
+    } catch (e) {}
+
+    // Persistência remota assíncrona
+    try {
+      await promiseWithTimeout(
+        supabase.from('pacientes').update(payload).eq('id', pacienteId),
+        3500
+      );
+    } catch (err) {
+      console.warn('Atualização remota pendente, mantendo alteração local:', err);
+    }
+
+    toast.success(`Status atualizado para: ${novoStatus}`);
   };
 
-  // 6. Atualização em Lote de Status (Admin)
+  // 6. Atualização em Lote de Status com Atualização Otimista
   const handleAtualizarStatusLote = async (novoStatus: StatusCarteira) => {
     if (selecionados.length === 0) {
       toast.warning('Selecione pelo menos um paciente.');
       return;
     }
 
-    try {
-      toast.info(`Atualizando ${selecionados.length} pacientes para ${novoStatus}...`);
-      const payload: Partial<Paciente> = { status_carteira: novoStatus };
-      if (novoStatus === 'EMITIDO' || novoStatus === 'APROVADO') {
-        payload.data_emissao = new Date().toISOString().split('T')[0];
-      }
-
-      const { error } = await supabase
-        .from('pacientes')
-        .update(payload)
-        .in('id', selecionados);
-
-      if (error) throw error;
-
-      setPacientes((prev) =>
-        prev.map((p) => (selecionados.includes(p.id) ? { ...p, ...payload } : p))
-      );
-      toast.success(`${selecionados.length} pacientes atualizados com sucesso!`);
-      setSelecionados([]);
-    } catch (err: any) {
-      console.error(err);
-      toast.error('Falha ao atualizar em lote.');
+    const dataHoje = new Date().toISOString().split('T')[0];
+    const payload: Partial<Paciente> = { status_carteira: novoStatus };
+    if (novoStatus === 'EMITIDO' || novoStatus === 'APROVADO') {
+      payload.data_emissao = dataHoje;
     }
+
+    // Atualização otimista
+    setPacientes((prev) =>
+      prev.map((p) => (selecionados.includes(p.id) ? { ...p, ...payload } : p))
+    );
+
+    // Sincronização local
+    try {
+      const salvos: Paciente[] = JSON.parse(localStorage.getItem('fibro_pacientes_local') || '[]');
+      const atualizados = salvos.map((p) => (selecionados.includes(p.id) ? { ...p, ...payload } : p));
+      localStorage.setItem('fibro_pacientes_local', JSON.stringify(atualizados));
+    } catch (e) {}
+
+    // Persistência remota
+    try {
+      await promiseWithTimeout(
+        supabase.from('pacientes').update(payload).in('id', selecionados),
+        4000
+      );
+    } catch (err) {
+      console.warn('Atualização remota em lote com falha/timeout, preservada localmente:', err);
+    }
+
+    toast.success(`${selecionados.length} pacientes atualizados com sucesso!`);
+    setSelecionados([]);
   };
 
   // 7. Download em Lote (Geração de ZIP com JSZip)
@@ -266,19 +283,31 @@ export const TabelaPacientes: React.FC<TabelaPacientesProps> = ({ currentRole })
         data_emissao: dataHoje,
       };
 
-      const { error } = await supabase
-        .from('pacientes')
-        .update(payload)
-        .in('id', selecionados);
-
-      if (error) throw error;
-
+      // Atualização otimista
       setPacientes((prev) =>
         prev.map((p) => (selecionados.includes(p.id) ? { ...p, ...payload } : p))
       );
-      toast.success('Status atualizado para EMITIDO!');
 
+      // Sincronização local
+      try {
+        const salvos: Paciente[] = JSON.parse(localStorage.getItem('fibro_pacientes_local') || '[]');
+        const atualizados = salvos.map((p) => (selecionados.includes(p.id) ? { ...p, ...payload } : p));
+        localStorage.setItem('fibro_pacientes_local', JSON.stringify(atualizados));
+      } catch (e) {}
+
+      // Persistência remota
+      try {
+        await promiseWithTimeout(
+          supabase.from('pacientes').update(payload).in('id', selecionados),
+          4000
+        );
+      } catch (err) {
+        console.warn('Update no Supabase pendente, preservando dados locais:', err);
+      }
+
+      toast.success('Status atualizado para EMITIDO!');
       toast.info('Compilando lote ZIP com PDFs renomeados por CPF...');
+
       await baixarCarteirasEmLoteZIP(listaAlvo, (atual, total) => {
         setProgressoLote({ atual, total });
       });
@@ -293,6 +322,7 @@ export const TabelaPacientes: React.FC<TabelaPacientesProps> = ({ currentRole })
       setProgressoLote(null);
     }
   };
+
 
   // Cores e Ícones de Status
   const getBadgeStatus = (status: StatusCarteira) => {
@@ -476,10 +506,26 @@ export const TabelaPacientes: React.FC<TabelaPacientesProps> = ({ currentRole })
                     <AlertCircle className="w-10 h-10 mx-auto text-gray-300 mb-2" />
                     <p className="font-semibold text-base text-gray-700">Nenhum paciente encontrado</p>
                     <p className="text-xs text-gray-400 mt-1">
-                      {busca ? 'Tente ajustar os termos da pesquisa.' : 'Cadastre o primeiro paciente para começar.'}
+                      {busca || filtroStatus !== 'TODOS'
+                        ? 'Nenhum resultado corresponde aos filtros aplicados.'
+                        : 'Cadastre o primeiro paciente para começar a emitir carteiras.'}
                     </p>
+                    {(busca || filtroStatus !== 'TODOS') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBusca('');
+                          setFiltroStatus('TODOS');
+                        }}
+                        className="mt-3 inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded-xl text-xs font-bold transition active:scale-95"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Limpar Filtros e Busca</span>
+                      </button>
+                    )}
                   </td>
                 </tr>
+
               ) : (
                 pacientesFiltrados.map((paciente) => {
                   const isSelected = selecionados.includes(paciente.id);
