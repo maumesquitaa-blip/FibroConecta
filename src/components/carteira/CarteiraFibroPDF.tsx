@@ -1,176 +1,129 @@
 import React from 'react';
 import { Page, Text, View, Document, StyleSheet, Image } from '@react-pdf/renderer';
 import { Paciente } from '@/types/database';
-import { formatarDataBR } from '@/lib/utils';
+import { BRASAO_BASE64, LACO_BASE64 } from './assets';
 
-// Medidas exatas padrão PVC: 57mm x 86mm
-// 1mm ~ 2.83465 pt -> Largura: 161.57 pt | Altura: 243.78 pt
 const styles = StyleSheet.create({
   page: {
-    width: 161.57,
-    height: 243.78,
-    padding: 7,
+    width: 161.57, // 57mm (161.57pt)
+    height: 243.78, // 86mm (243.78pt)
+    padding: 8,
     backgroundColor: '#FFFFFF',
     fontFamily: 'Helvetica',
     position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
   },
   headerBox: {
-    backgroundColor: '#3B0764',
-    paddingVertical: 3,
-    paddingHorizontal: 4,
-    borderRadius: 3,
-    marginBottom: 4,
     alignItems: 'center',
+    marginBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#7C3AED',
+    borderBottomStyle: 'solid',
+    paddingBottom: 2,
   },
   titleHeader: {
     fontSize: 5.5,
     fontWeight: 'bold',
     textAlign: 'center',
-    color: '#FFFFFF',
+    color: '#4C1D95',
     textTransform: 'uppercase',
-    letterSpacing: 0.2,
   },
   subHeader: {
     fontSize: 4,
     textAlign: 'center',
-    color: '#E9D5FF',
+    color: '#6D28D9',
     marginTop: 1,
-    fontWeight: 'bold',
   },
   photoContainer: {
     alignItems: 'center',
-    marginVertical: 2,
+    marginVertical: 4,
   },
   photo: {
-    width: 65,
-    height: 82,
+    width: 68, // Proporção 3x4 (24mm x 32mm aprox)
+    height: 90,
     borderRadius: 3,
-    objectFit: 'cover',
     borderWidth: 1,
-    borderColor: '#7E22CE',
-  },
-  bodyFrente: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  fieldGroup: {
-    marginBottom: 2.5,
+    borderColor: '#D1D5DB',
+    borderStyle: 'solid',
+    objectFit: 'cover',
   },
   fieldLabel: {
-    fontSize: 3.8,
+    fontSize: 4,
     color: '#6B7280',
     textTransform: 'uppercase',
-    fontWeight: 'bold',
+    marginTop: 2,
   },
   fieldValue: {
-    fontSize: 5.2,
+    fontSize: 5.5,
     fontWeight: 'bold',
     color: '#111827',
-    textTransform: 'uppercase',
   },
-  badgeCID: {
-    backgroundColor: '#F3E8FF',
-    paddingVertical: 1,
-    paddingHorizontal: 3,
-    borderRadius: 2,
-    alignSelf: 'flex-start',
-    borderWidth: 0.5,
-    borderColor: '#C084FC',
-    marginTop: 1,
-  },
-  badgeCIDText: {
-    fontSize: 4.8,
-    fontWeight: 'bold',
-    color: '#6B21A8',
-  },
-  footerFrente: {
-    borderTopWidth: 0.8,
-    borderTopColor: '#7E22CE',
-    paddingTop: 2,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 4,
-    fontWeight: 'bold',
-    color: '#3B0764',
-    textAlign: 'center',
-  },
-  footerSubtext: {
-    fontSize: 3.2,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginTop: 0.5,
-  },
-  
-  // VERSO
-  versoHeader: {
+  footerBrand: {
+    position: 'absolute',
+    bottom: 6,
+    left: 8,
+    right: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: 0.8,
-    borderBottomColor: '#E5E7EB',
-    paddingBottom: 3,
-    marginBottom: 4,
-  },
-  versoTitleBox: {
-    flex: 1,
-    paddingRight: 4,
-  },
-  versoTitle: {
-    fontSize: 5,
-    fontWeight: 'bold',
-    color: '#1E3A8A',
-    textTransform: 'uppercase',
-  },
-  versoSubtitle: {
-    fontSize: 3.6,
-    color: '#6B7280',
-  },
-  qrCodeImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 2,
-  },
-  versoFields: {
-    flex: 1,
-  },
-  legalSection: {
     borderTopWidth: 0.5,
-    borderTopColor: '#D1D5DB',
-    paddingTop: 2,
-    marginTop: 2,
+    borderTopColor: '#E5E7EB',
+    borderTopStyle: 'solid',
+    paddingTop: 3,
   },
-  legalTitle: {
+  footerText: {
     fontSize: 3.5,
     fontWeight: 'bold',
-    color: '#374151',
-    marginBottom: 1,
+    color: '#4B5563',
+    textAlign: 'center',
+  },
+  qrCodeBox: {
+    alignItems: 'center',
+    marginTop: 2,
+    marginBottom: 6,
+  },
+  qrCode: {
+    width: 45,
+    height: 45,
+  },
+  legalSection: {
+    position: 'absolute',
+    bottom: 6,
+    left: 8,
+    right: 8,
   },
   legalText: {
     fontSize: 3.2,
     color: '#4B5563',
     textAlign: 'justify',
     lineHeight: 1.2,
-    marginBottom: 1.5,
+    marginTop: 2,
   },
 });
 
-interface CarteiraFibroPDFProps {
+export interface CarteiraPVCProps {
   paciente: Paciente;
+  qrCodeUrl?: string;
+  brasaoUrl?: string;
+  lacoUrl?: string;
   qrCodeDataUrl?: string;
 }
 
-export const CarteiraFibroPDF: React.FC<CarteiraFibroPDFProps> = ({ paciente, qrCodeDataUrl }) => {
+export const CarteiraPVC: React.FC<CarteiraPVCProps> = ({
+  paciente,
+  qrCodeUrl,
+  brasaoUrl = BRASAO_BASE64,
+  lacoUrl = LACO_BASE64,
+  qrCodeDataUrl,
+}) => {
+  const qr = qrCodeUrl || qrCodeDataUrl;
+
   return (
-    <Document title={`Carteira_Fibro_${paciente.cpf.replace(/\D/g, '')}`} author="SEMUS São José de Ribamar">
+    <Document title={`Carteira_Fibro_${paciente.cpf?.replace(/\D/g, '') || 'CIPFIBRO'}`} author="SEMUS São José de Ribamar">
       {/* FRENTE */}
       <Page size={[161.57, 243.78]} style={styles.page}>
         <View style={styles.headerBox}>
-          <Text style={styles.titleHeader}>CARTEIRA DE PRIORIDADE DA PESSOA COM FIBROMIALGIA</Text>
-          <Text style={styles.subHeader}>LEI FEDERAL Nº 14.705/2023</Text>
+          <Text style={styles.titleHeader}>Carteira de Prioridade para Pessoas com Fibromialgia</Text>
+          <Text style={styles.subHeader}>Lei Federal Nº 14.705/2023</Text>
         </View>
 
         <View style={styles.photoContainer}>
@@ -183,72 +136,53 @@ export const CarteiraFibroPDF: React.FC<CarteiraFibroPDFProps> = ({ paciente, qr
           )}
         </View>
 
-        <View style={styles.bodyFrente}>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Nome Completo</Text>
-            <Text style={styles.fieldValue}>{paciente.nome_completo || '-'}</Text>
-          </View>
+        <Text style={styles.fieldLabel}>Nome Completo</Text>
+        <Text style={styles.fieldValue}>{paciente.nome_completo?.toUpperCase() || '-'}</Text>
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Cartão Nacional de Saúde (SUS)</Text>
-            <Text style={styles.fieldValue}>{paciente.cartao_sus || '-'}</Text>
-          </View>
+        <Text style={styles.fieldLabel}>Cartão SUS</Text>
+        <Text style={styles.fieldValue}>{paciente.cartao_sus || '-'}</Text>
 
-          <View style={styles.badgeCID}>
-            <Text style={styles.badgeCIDText}>CID-10: {paciente.cid10 || 'M79.7'}</Text>
-          </View>
-        </View>
+        <Text style={styles.fieldLabel}>CID-10</Text>
+        <Text style={styles.fieldValue}>{paciente.cid10 || 'M79.7'}</Text>
 
-        <View style={styles.footerFrente}>
-          <Text style={styles.footerText}>PREFEITURA DE SÃO JOSÉ DE RIBAMAR</Text>
-          <Text style={styles.footerSubtext}>SEMUS • VÁLIDO EM TODO O TERRITÓRIO NACIONAL</Text>
+        <View style={styles.footerBrand}>
+          {brasaoUrl ? <Image src={brasaoUrl} style={{ width: 16, height: 16 }} /> : null}
+          <Text style={styles.footerText}>SEMUS - VÁLIDO EM TODO TERRITÓRIO NACIONAL</Text>
+          {lacoUrl ? <Image src={lacoUrl} style={{ width: 14, height: 18 }} /> : null}
         </View>
       </Page>
 
       {/* VERSO */}
       <Page size={[161.57, 243.78]} style={styles.page}>
-        <View style={styles.versoHeader}>
-          <View style={styles.versoTitleBox}>
-            <Text style={styles.versoTitle}>DADOS OFICIAIS</Text>
-            <Text style={styles.versoSubtitle}>Escaneie o QR Code para autenticidade</Text>
-          </View>
-          {qrCodeDataUrl && (
-            <Image style={styles.qrCodeImage} src={qrCodeDataUrl} />
-          )}
+        <View style={styles.qrCodeBox}>
+          {qr ? <Image style={styles.qrCode} src={qr} /> : null}
         </View>
 
-        <View style={styles.versoFields}>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>CPF</Text>
-            <Text style={styles.fieldValue}>{paciente.cpf || '-'}</Text>
-          </View>
+        <Text style={styles.fieldLabel}>CPF</Text>
+        <Text style={styles.fieldValue}>{paciente.cpf || '-'}</Text>
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Data de Nascimento</Text>
-            <Text style={styles.fieldValue}>{formatarDataBR(paciente.data_nascimento)}</Text>
-          </View>
+        <Text style={styles.fieldLabel}>Data de Nascimento</Text>
+        <Text style={styles.fieldValue}>{paciente.data_nascimento || '-'}</Text>
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Contato de Emergência</Text>
-            <Text style={styles.fieldValue}>{paciente.contato_emergencia || '-'}</Text>
-          </View>
+        <Text style={styles.fieldLabel}>Contato de Emergência</Text>
+        <Text style={styles.fieldValue}>{paciente.contato_emergencia || '-'}</Text>
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Data de Emissão</Text>
-            <Text style={styles.fieldValue}>{formatarDataBR(paciente.data_emissao || new Date().toISOString())}</Text>
-          </View>
-        </View>
+        <Text style={styles.fieldLabel}>Data de Emissão</Text>
+        <Text style={styles.fieldValue}>
+          {paciente.data_emissao || new Date().toLocaleDateString('pt-BR')}
+        </Text>
 
         <View style={styles.legalSection}>
-          <Text style={styles.legalTitle}>SECRETARIA MUNICIPAL DE SAÚDE - SEMUS</Text>
+          <Text style={[styles.legalText, { fontWeight: 'bold' }]}>
+            EMITIDO POR: SECRETARIA MUNICIPAL DE SÃO JOSÉ DE RIBAMAR - SEMUS
+          </Text>
           <Text style={styles.legalText}>
             AMPARO LEGAL: Confere atendimento preferencial em órgãos públicos e empresas privadas nos termos da Lei Federal Nº 14.705/2023 e Lei Municipal Nº 1.375, de 09 de maio de 2023.
-          </Text>
-          <Text style={{ fontSize: 2.8, color: '#9CA3AF', textAlign: 'center' }}>
-            ID Validação: {paciente.id || 'N/A'}
           </Text>
         </View>
       </Page>
     </Document>
   );
 };
+
+export const CarteiraFibroPDF = CarteiraPVC;

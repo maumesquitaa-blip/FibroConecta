@@ -149,13 +149,12 @@ export const CarteiraPreviewModal: React.FC<CarteiraPreviewModalProps> = ({
                   </div>
                 </div>
 
-                <div className="border-t border-purple-200 pt-1.5 text-center mt-1">
-                  <p className="text-[8px] font-extrabold text-fibro-950 leading-tight">
-                    PREFEITURA DE SÃO JOSÉ DE RIBAMAR
+                <div className="border-t border-purple-200 pt-1.5 flex items-center justify-between mt-1 px-1">
+                  <img src="/brasao.png" alt="Brasão" className="w-4 h-4 object-contain" />
+                  <p className="text-[6.5px] text-gray-700 font-bold leading-tight text-center">
+                    SEMUS - VÁLIDO EM TODO TERRITÓRIO NACIONAL
                   </p>
-                  <p className="text-[6.5px] text-gray-600 font-medium leading-tight">
-                    SEMUS • Válido em todo território nacional
-                  </p>
+                  <img src="/laco.png" alt="Laço" className="w-3.5 h-4 object-contain" />
                 </div>
               </>
             ) : (
