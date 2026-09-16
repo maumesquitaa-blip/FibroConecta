@@ -8,8 +8,17 @@ import {
   baixarCarteiraPDF,
   baixarCarteirasEmLoteZIP,
 } from '@/lib/pdf-generator';
-import { CarteiraPreviewModal } from '@/components/carteira/CarteiraPreviewModal';
-import { DocumentViewerModal } from './DocumentViewerModal';
+import dynamic from 'next/dynamic';
+
+const CarteiraPreviewModal = dynamic(
+  () => import('@/components/carteira/CarteiraPreviewModal').then((mod) => mod.CarteiraPreviewModal),
+  { ssr: false }
+);
+
+const DocumentViewerModal = dynamic(
+  () => import('./DocumentViewerModal').then((mod) => mod.DocumentViewerModal),
+  { ssr: false }
+);
 import {
   Search,
   Filter,

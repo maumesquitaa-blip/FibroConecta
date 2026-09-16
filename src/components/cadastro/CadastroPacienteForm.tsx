@@ -8,10 +8,19 @@ import { Camera, Upload, User, FileText, CheckCircle2, RefreshCw, Eye, ArrowRigh
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase/client';
 import { validarCPF, mascaraCPF, mascaraSUS, mascaraTelefone } from '@/lib/utils';
-import { WebcamCaptureModal } from './WebcamCaptureModal';
+import dynamic from 'next/dynamic';
 import { DocumentUpload } from './DocumentUpload';
-import { CarteiraPreviewModal } from '@/components/carteira/CarteiraPreviewModal';
 import { Paciente } from '@/types/database';
+
+const WebcamCaptureModal = dynamic(
+  () => import('./WebcamCaptureModal').then((mod) => mod.WebcamCaptureModal),
+  { ssr: false }
+);
+
+const CarteiraPreviewModal = dynamic(
+  () => import('@/components/carteira/CarteiraPreviewModal').then((mod) => mod.CarteiraPreviewModal),
+  { ssr: false }
+);
 
 const schemaPaciente = z.object({
   nome_completo: z

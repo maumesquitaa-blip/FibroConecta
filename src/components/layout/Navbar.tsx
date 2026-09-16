@@ -54,6 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRole, onRoleChange }) => 
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={true}
                   className={`inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
                     isActive
                       ? 'bg-fibro-50 text-fibro-900 border border-purple-200 shadow-sm'

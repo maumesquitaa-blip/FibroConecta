@@ -1,17 +1,15 @@
-import QRCode from 'qrcode';
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
 import { Paciente } from '@/types/database';
 import React from 'react';
 
 /**
- * Gera o QR Code em formato base64 PNG para inclusão no PDF e na tela
+ * Gera o QR Code em formato base64 PNG para inclusão no PDF e na tela (on-demand)
  */
 export async function gerarQRCodeDataUrl(pacienteId: string, origin?: string): Promise<string> {
   const baseUrl = origin || (typeof window !== 'undefined' ? window.location.origin : 'https://fibroconecta.semus.gov.br');
   const validacaoUrl = `${baseUrl}/validar/${pacienteId}`;
   
   try {
+    const QRCode = (await import('qrcode')).default;
     return await QRCode.toDataURL(validacaoUrl, {
       width: 150,
       margin: 1,
@@ -27,10 +25,9 @@ export async function gerarQRCodeDataUrl(pacienteId: string, origin?: string): P
 }
 
 /**
- * Gera o Blob do PDF da carteira
+ * Gera o Blob do PDF da carteira (on-demand)
  */
 export async function gerarCarteiraBlob(paciente: Paciente): Promise<Blob> {
-  // Importação dinâmica para evitar execução indevida no SSR
   const { pdf } = await import('@react-pdf/renderer');
   const { CarteiraFibroPDF } = await import('@/components/carteira/CarteiraFibroPDF');
   
@@ -45,21 +42,26 @@ export async function gerarCarteiraBlob(paciente: Paciente): Promise<Blob> {
 }
 
 /**
- * Faz download individual da carteira
+ * Faz download individual da carteira (on-demand)
  */
 export async function baixarCarteiraPDF(paciente: Paciente): Promise<void> {
+  const { saveAs } = await import('file-saver');
   const blob = await gerarCarteiraBlob(paciente);
-  const nomeArquivo = `CIPFIBRO_${paciente.nome_completo.replace(/\s+/g, '_')}_${paciente.cpf.replace(/\D/g, '')}.pdf`;
+  const cpfLimpo = paciente.cpf.replace(/\D/g, '');
+  const nomeArquivo = `${cpfLimpo}_CIPFIBRO_${paciente.nome_completo.replace(/\s+/g, '_')}.pdf`;
   saveAs(blob, nomeArquivo);
 }
 
 /**
- * Gera arquivo ZIP com carteiras selecionadas em lote
+ * Gera arquivo ZIP com carteiras selecionadas em lote (on-demand)
  */
 export async function baixarCarteirasEmLoteZIP(
   pacientes: Paciente[],
   onProgress?: (processados: number, total: number) => void
 ): Promise<void> {
+  const JSZip = (await import('jszip')).default;
+  const { saveAs } = await import('file-saver');
+  
   const zip = new JSZip();
   const folder = zip.folder('carteiras_cipfibro');
 
