@@ -101,13 +101,27 @@ export const CarteiraPreviewModal: React.FC<CarteiraPreviewModalProps> = ({
             {lado === 'frente' ? (
               // FRENTE
               <>
-                <div className="bg-fibro-950 text-white rounded-lg p-2 text-center shadow-inner">
-                  <h4 className="text-[9px] font-black tracking-tight uppercase leading-tight">
-                    Carteira de Prioridade da Pessoa com Fibromialgia
-                  </h4>
-                  <p className="text-[7px] text-purple-200 font-semibold mt-0.5">
-                    Lei Federal Nº 14.705/2023
-                  </p>
+                {/* CABEÇALHO HARMONIOSO */}
+                <div className="flex items-center justify-between border-b border-purple-300 pb-1.5 px-0.5">
+                  <img
+                    src="/logo-semus-brasao.png"
+                    alt="SEMUS São José de Ribamar"
+                    className="h-7 w-auto object-contain"
+                  />
+                  <div className="text-center px-1 flex-1">
+                    <h4 className="text-[7.5px] font-black tracking-tight uppercase text-purple-950 leading-tight">
+                      CARTEIRA DE PRIORIDADE
+                    </h4>
+                    <p className="text-[6px] text-purple-800 font-bold leading-tight">
+                      PESSOA COM FIBROMIALGIA
+                    </p>
+                    <p className="text-[5px] text-gray-500">Lei Federal Nº 14.705/2023</p>
+                  </div>
+                  <img
+                    src="/laco-fibromialgia.png"
+                    alt="Laço Fibromialgia"
+                    className="h-7 w-auto object-contain"
+                  />
                 </div>
 
                 <div className="flex justify-center my-1">
@@ -149,27 +163,35 @@ export const CarteiraPreviewModal: React.FC<CarteiraPreviewModalProps> = ({
                   </div>
                 </div>
 
-                <div className="border-t border-purple-200 pt-1.5 flex items-center justify-between mt-1 px-1">
-                  <img src="/brasao.png" alt="Brasão" className="w-4 h-4 object-contain" />
-                  <p className="text-[6.5px] text-gray-700 font-bold leading-tight text-center">
-                    SEMUS - VÁLIDO EM TODO TERRITÓRIO NACIONAL
+                <div className="border-t border-purple-200 pt-1 text-center mt-1">
+                  <p className="text-[7.5px] font-extrabold text-fibro-950 uppercase leading-tight">
+                    PREFEITURA DE SÃO JOSÉ DE RIBAMAR
                   </p>
-                  <img src="/laco.png" alt="Laço" className="w-3.5 h-4 object-contain" />
+                  <p className="text-[6px] text-gray-600 font-medium leading-tight">
+                    SEMUS • VÁLIDO EM TODO O TERRITÓRIO NACIONAL
+                  </p>
                 </div>
               </>
             ) : (
               // VERSO
               <>
-                <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-                  <div>
-                    <h5 className="text-[10px] font-extrabold text-blue-900 uppercase">
-                      Dados Oficiais
-                    </h5>
-                    <p className="text-[7px] text-gray-500">Validação Digital</p>
+                <div className="flex items-center justify-between border-b border-gray-200 pb-1.5">
+                  <div className="flex items-center space-x-1.5">
+                    <img
+                      src="/logo-semus-brasao.png"
+                      alt="SEMUS"
+                      className="h-6 w-auto object-contain"
+                    />
+                    <div>
+                      <h5 className="text-[8px] font-extrabold text-blue-950 uppercase leading-tight">
+                        DADOS DE REGISTRO
+                      </h5>
+                      <p className="text-[5.5px] text-gray-500">Validação Digital via QR Code</p>
+                    </div>
                   </div>
                   {qrCodeUrl && (
                     <div className="p-0.5 bg-white border border-blue-200 rounded shadow-sm">
-                      <img src={qrCodeUrl} alt="QR Code" className="w-10 h-10" />
+                      <img src={qrCodeUrl} alt="QR Code" className="w-8 h-8" />
                     </div>
                   )}
                 </div>
